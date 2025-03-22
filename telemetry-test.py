@@ -7,6 +7,7 @@ from smolagents import (
     DuckDuckGoSearchTool,
     VisitWebpageTool,
     HfApiModel,
+    GradioUI
 )
 
 register()
@@ -29,3 +30,5 @@ manager_agent = CodeAgent(
 manager_agent.run(
     "If the US keeps its 2024 growth rate, how many years will it take for the GDP to double?"
 )
+
+GradioUI(manager_agent).launch()
