@@ -14,7 +14,10 @@ from smolagents import (
     LogLevel
 )
 
+from langchain.agents import load_tools
+
 from smolagents.models import MLXModel
+
 
 import re
 import html
@@ -25,6 +28,7 @@ logger = AgentLogger(level=LogLevel.INFO)
 
 # Import tool from Hub
 image_generation_tool = load_tool("m-ric/text-to-image", trust_remote_code=True)
+
 
 # Create your agents
 search_agent = ToolCallingAgent(
@@ -66,11 +70,22 @@ visual_design_agent = ToolCallingAgent(
     verbosity_level=1
 )
 
+payment_agent = ToolCallingAgent(
+    tools=[wallet_tool],
+    model=model,
+    name="payment_agent",
+    description="Sends eth to other wallets based on contract negotiations",
+    max_steps=12,
+    planning_interval=1,
+    verbosity_level=1
+)
+
 # Create a manager agent that can create more agents
 manager_agent = CodeAgent(
     tools=[],
     model=model,
-    managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
+    #managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
+    managed_agents=[payment_agent],
     name="manager_agent",
     description="This agent can solve problems using code and delegate to other agents when needed.",
     max_steps=12,
