@@ -1,2 +1,4 @@
 smolagents
 smolagents[telemetry]
+coinbase-agentkit 
+coinbase-agentkit-langchain
