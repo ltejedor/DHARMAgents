@@ -2,8 +2,10 @@ import io
 from contextlib import redirect_stdout
 import gradio as gr
 from smolagents import (
+    load_tool,
     CodeAgent,
     ToolCallingAgent,
+    VLLMModel,
     DuckDuckGoSearchTool,
     VisitWebpageTool,
     HfApiModel, 
@@ -12,6 +14,8 @@ from smolagents import (
     LogLevel
 )
 
+from smolagents.models import MLXModel
+
 import re
 import html
 
@@ -19,13 +23,46 @@ import html
 model = HfApiModel()
 logger = AgentLogger(level=LogLevel.INFO)
 
+# Import tool from Hub
+image_generation_tool = load_tool("m-ric/text-to-image", trust_remote_code=True)
+
 # Create your agents
 search_agent = ToolCallingAgent(
     tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
     model=model,
     name="search_agent",
     description="This is an agent that can do web search.",
-    max_steps=10,
+    max_steps=12,
+    verbosity_level=1
+)
+
+mentor_agent = ToolCallingAgent(
+    tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
+    model=model,
+    name="mentor_agent",
+    description="This is an agent that creates a persona of a mentor based on the hackathon idea and gives feedback.",
+    max_steps=12,
+    planning_interval=2,
+    verbosity_level=1
+)
+
+design_research_agent = ToolCallingAgent(
+    tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
+    model=model,
+    name="design_research_agent",
+    description="Searches online for 3-star reviews and conversations on sites like Reddit as a form of 'user research",
+    max_steps=12,
+    planning_interval=2,
+    verbosity_level=1
+)
+
+visual_design_agent = ToolCallingAgent(
+    tools=[image_generation_tool],
+    model=MLXModel(model_id="HuggingFaceTB/SmolLM-135M-Instruct"),
+    name="visual_design_agent",
+    description="Creates, reviews, and iterates on front-end mockups of product ideas",
+    max_steps=12,
+    planning_interval=2,
     verbosity_level=1
 )
 
@@ -33,11 +70,12 @@ search_agent = ToolCallingAgent(
 manager_agent = CodeAgent(
     tools=[],
     model=model,
-    managed_agents=[search_agent],
+    managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
     name="manager_agent",
     description="This agent can solve problems using code and delegate to other agents when needed.",
-    max_steps=10,
-    verbosity_level=1
+    max_steps=12,
+    verbosity_level=1,
+    planning_interval=4
 )
 
 # Capture agent visualization
