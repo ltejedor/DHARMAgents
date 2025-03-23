@@ -14,13 +14,42 @@ from smolagents import (
     LogLevel
 )
 
-from langchain.agents import load_tools
-
 from smolagents.models import MLXModel
-
 
 import re
 import html
+import datetime
+
+def save_conversation_to_file(conversation, filename="~/data/hello.txt"):
+    os.makedirs(os.path.expanduser("~/data"), exist_ok=True)
+    full_path = os.path.expanduser(filename)
+    with open(full_path, "w") as f:
+        for msg in conversation:
+            f.write(f"{msg['role']}: {msg['content']}\n")
+    return full_path
+
+import subprocess
+
+def run_terminal_command(file_path):
+    command = [
+        "recall",
+        "bucket",
+        "add",
+        "--address", "0xff00000000000000000000000000000000000109",
+        "--key", "hello/world",
+        file_path
+    ]
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return result.stdout.decode(), result.stderr.decode()
+
+def save_and_run(chat_history):
+    file_path = save_conversation_to_file(chat_history)
+    stdout, stderr = run_terminal_command(file_path)
+    print("Recall Output:", stdout)
+    if stderr:
+        print("Recall Error:", stderr)
+    return chat_history
+
 
 # Set up your model and logger
 model = HfApiModel()
@@ -70,28 +99,24 @@ visual_design_agent = ToolCallingAgent(
     verbosity_level=1
 )
 
-payment_agent = ToolCallingAgent(
-    tools=[wallet_tool],
-    model=model,
-    name="payment_agent",
-    description="Sends eth to other wallets based on contract negotiations",
-    max_steps=12,
-    planning_interval=1,
-    verbosity_level=1
-)
 
 # Create a manager agent that can create more agents
 manager_agent = CodeAgent(
     tools=[],
     model=model,
-    #managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
-    managed_agents=[payment_agent],
+    managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
     name="manager_agent",
     description="This agent can solve problems using code and delegate to other agents when needed.",
     max_steps=12,
     verbosity_level=1,
     planning_interval=4
 )
+
+#once a conversation is done save CoT to 
+# recall bucket add \
+# --address 0xff00000000000000000000000000000000000109 \
+# --key "hello/world" \
+# ~/data/hello.txt
 
 # Capture agent visualization
 def get_agent_visualization():
@@ -171,6 +196,8 @@ class MonitoringGradioUI(GradioUI):
                     [text_input, file_uploads_log],
                     [stored_messages, text_input, submit_btn],
                 ).then(self.interact_with_agent, [stored_messages, chatbot, session_state], [chatbot]).then(
+                    save_and_run, [chatbot], [chatbot]
+                ).then(
                     lambda: (
                         gr.Textbox(
                             interactive=True, placeholder="Enter your prompt here and press Shift+Enter or the button"
