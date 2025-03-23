@@ -20,7 +20,7 @@ import re
 import html
 import datetime
 
-def save_conversation_to_file(conversation, filename="~/data/hello.txt"):
+def save_conversation_to_file(conversation, filename="~/data/final_negotiation.txt"):
     os.makedirs(os.path.expanduser("~/data"), exist_ok=True)
     full_path = os.path.expanduser(filename)
     with open(full_path, "w") as f:
@@ -55,75 +55,32 @@ def save_and_run(chat_history):
 model = HfApiModel()
 logger = AgentLogger(level=LogLevel.INFO)
 
-# Import tool from Hub
-image_generation_tool = load_tool("m-ric/text-to-image", trust_remote_code=True)
-
-
-# Create your agents
-search_agent = ToolCallingAgent(
-    tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
-    model=model,
-    name="search_agent",
-    description="This is an agent that can do web search.",
-    max_steps=12,
-    verbosity_level=1
-)
-
-mentor_agent = ToolCallingAgent(
-    tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
-    model=model,
-    name="mentor_agent",
-    description="This is an agent that creates a persona of a mentor based on the hackathon idea and gives feedback.",
-    max_steps=12,
-    planning_interval=2,
-    verbosity_level=1
-)
-
-design_research_agent = ToolCallingAgent(
-    tools=[DuckDuckGoSearchTool(), VisitWebpageTool()],
-    model=model,
-    name="design_research_agent",
-    description="Searches online for 3-star reviews and conversations on sites like Reddit as a form of 'user research",
-    max_steps=12,
-    planning_interval=2,
-    verbosity_level=1
-)
-
-visual_design_agent = ToolCallingAgent(
-    tools=[image_generation_tool],
-    model=MLXModel(model_id="HuggingFaceTB/SmolLM-135M-Instruct"),
-    name="visual_design_agent",
-    description="Creates, reviews, and iterates on front-end mockups of product ideas",
-    max_steps=12,
-    planning_interval=2,
-    verbosity_level=1
-)
-
-
-# Create a manager agent that can create more agents
-manager_agent = CodeAgent(
+agent_party_b = CodeAgent(
     tools=[],
     model=model,
-    managed_agents=[search_agent, mentor_agent, design_research_agent, visual_design_agent],
-    name="manager_agent",
-    description="This agent can solve problems using code and delegate to other agents when needed.",
+    name="agent_party_b",
+    description="You are Dr. Daniel Faraday's negotiation agent seeking favorable research terms for a physicist specializing in time-space anomalies; require research autonomy, equipment access, publication pathways, safety protocols, and return guarantees; prioritize unique research access over compensation; authorized to accept agreements meeting all non-negotiables and addressing 60 percent of key questions satisfactorily.",
     max_steps=12,
     verbosity_level=1,
     planning_interval=4
 )
 
-#once a conversation is done save CoT to 
-# recall bucket add \
-# --address 0xff00000000000000000000000000000000000109 \
-# --key "hello/world" \
-# ~/data/hello.txt
+# Create a manager agent that can create more agents
+agent_party_a = CodeAgent(
+    tools=[],
+    managed_agents=[agent_party_b],
+    model=model,
+    name="agent_party_a",
+    description="Work with Dr. Daniel Faraday's Agent. You are Dr. Juliet Burke's negotiation agent seeking qualified researchers (PhD required, 6-month commitment, top-secret clearance) for confidential island medical research; prioritize security and minimal information disclosure while offering unique research opportunities, competitive compensation, and publication rights (with review); authorized to finalize agreements meeting all non-negotiables and 70 percent of strategic goals.",
+    max_steps=12,
+    verbosity_level=1,
+    planning_interval=4
+)
+
+
 
 # Capture agent visualization
-def get_agent_visualization():
-    buffer = io.StringIO()
-    with redirect_stdout(buffer):
-        logger.visualize_agent_tree(manager_agent)
-    return buffer.getvalue()
+
 
 def clean_ansi_codes(text):
     """Remove ANSI color codes for clean display"""
@@ -224,30 +181,30 @@ class MonitoringGradioUI(GradioUI):
                 )
             
             # Add the Monitoring tab
-            with gr.Tab("Agent Monitoring"):
-                # Get the visualization text
-                agent_viz = get_agent_visualization()
-                agent_viz_clean = clean_ansi_codes(agent_viz)
+            # with gr.Tab("Agent Monitoring"):
+            #     # Get the visualization text
+            #     agent_viz = get_agent_visualization()
+            #     agent_viz_clean = clean_ansi_codes(agent_viz)
                 
-                # Convert the tree characters to HTML with proper formatting
-                html_viz = agent_viz_clean.replace("├──", "├─ ").replace("└──", "└─ ").replace("│", "│ ")
-                html_viz = html.escape(html_viz)
-                html_viz = f"<pre style='font-family: monospace; white-space: pre; font-size: 14px;'>{html_viz}</pre>"
+            #     # Convert the tree characters to HTML with proper formatting
+            #     html_viz = agent_viz_clean.replace("├──", "├─ ").replace("└──", "└─ ").replace("│", "│ ")
+            #     html_viz = html.escape(html_viz)
+            #     html_viz = f"<pre style='font-family: monospace; white-space: pre; font-size: 14px;'>{html_viz}</pre>"
                 
-                viz_html = gr.HTML(value=html_viz)
+            #     viz_html = gr.HTML(value=html_viz)
                 
-                # Add a refresh button
-                refresh_btn = gr.Button("Refresh Agent Tree")
+            #     # Add a refresh button
+            #     refresh_btn = gr.Button("Refresh Agent Tree")
                 
-                def refresh_viz():
-                    new_viz = get_agent_visualization()
-                    new_viz_clean = clean_ansi_codes(new_viz)
-                    html_viz = new_viz_clean.replace("├──", "├─ ").replace("└──", "└─ ").replace("│", "│ ")
-                    html_viz = html.escape(html_viz)
-                    html_viz = f"<pre style='font-family: monospace; white-space: pre; font-size: 14px;'>{html_viz}</pre>"
-                    return html_viz
+            #     def refresh_viz():
+            #         new_viz = get_agent_visualization()
+            #         new_viz_clean = clean_ansi_codes(new_viz)
+            #         html_viz = new_viz_clean.replace("├──", "├─ ").replace("└──", "└─ ").replace("│", "│ ")
+            #         html_viz = html.escape(html_viz)
+            #         html_viz = f"<pre style='font-family: monospace; white-space: pre; font-size: 14px;'>{html_viz}</pre>"
+            #         return html_viz
                 
-                refresh_btn.click(refresh_viz, None, viz_html)
+            #     refresh_btn.click(refresh_viz, None, viz_html)
                 
                 # Add some explanatory text
                 gr.Markdown("""
@@ -268,5 +225,5 @@ class MonitoringGradioUI(GradioUI):
 import os
 os.makedirs("./uploads", exist_ok=True)
 
-ui = MonitoringGradioUI(manager_agent, file_upload_folder="./uploads")
+ui = MonitoringGradioUI(agent_party_a, file_upload_folder="./uploads")
 ui.launch(share=True)  # Set share=False if you don't want to create a public link
